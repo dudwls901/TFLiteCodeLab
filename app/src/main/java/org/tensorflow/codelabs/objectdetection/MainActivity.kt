@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
         val detector = ObjectDetector.createFromFileAndOptions(
             this, //activitycontext
-            "model.tflite",// assets 디렉토리 안의 파일 이름과 파일 형식이 같아야 함
+            "salad.tflite",// assets 디렉토리 안의 파일 이름과 파일 형식이 같아야 함
             options
         )
 
@@ -146,10 +146,24 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         val results = detector.detect(image)
 
         debugPrint(results)
+
+        val resultToDisplay = results.map {
+            //category 분류중 가장 확률 높은 놈
+            val category = it.categories.first()
+            val text = "${category.label}, ${category.score.times(100).toInt()}%}"
+
+            DetectionResult(it.boundingBox, text)
+        }
+        val imgWithResult = drawDetectionResult(bitmap, resultToDisplay)
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            inputImageView.setImageBitmap(imgWithResult)
+        }
+
     }
 
-    private fun debugPrint(results : List<Detection>) {
-        for ((i, obj) in results.withIndex() ) {
+    private fun debugPrint(results: List<Detection>) {
+        for ((i, obj) in results.withIndex()) {
             val box = obj.boundingBox
 
             Log.d(TAG, "Detected object: ${i} ")
