@@ -35,6 +35,9 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.tensorflow.lite.support.image.TensorImage
+import org.tensorflow.lite.task.vision.detector.Detection
+import org.tensorflow.lite.task.vision.detector.ObjectDetector
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -108,12 +111,56 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
+
+    /*
+    *
+    * 이미지 / 스트림 준비: TensorImage
+    * 검사 프로그램 객체 ObjectDetector를 만듭니다.
+    * 위의 두 객체 연결: detect(image)
+    * */
     /**
      * runObjectDetection(bitmap: Bitmap)
      *      TFLite Object Detection function
      */
     private fun runObjectDetection(bitmap: Bitmap) {
-        //TODO: Add object detection code here
+        val image = TensorImage.fromBitmap(bitmap)
+        val options = ObjectDetector.ObjectDetectorOptions.builder()
+            .setMaxResults(5)
+            .setScoreThreshold(0.5f)
+            .build()
+
+        val detector = ObjectDetector.createFromFileAndOptions(
+            this, //activitycontext
+            "model.tflite",// assets 디렉토리 안의 파일 이름과 파일 형식이 같아야 함
+            options
+        )
+
+        //완료되면 detector는 List<Detection> 반환
+        //Detection : 모델이 이미지에서 발견한 객체에 대한 정보
+        /*
+        * boundingBox: 이미지 내에서 객체의 존재와 위치를 선언하는 직사각형
+        * categories: 객체의 종류 및 감지 결과에 대한 모델의 신뢰도입니다. 이 모델은 여러 카테고리를 반환하고 가장 신뢰도 높은 카테고리를 먼저 반환합니다.
+        * label: 객체 카테고리의 이름입니다.
+        * classificationConfidence: 0.0~1.0 범위의 부동 소수점 수, 1.0: 100%
+        * */
+        val results = detector.detect(image)
+
+        debugPrint(results)
+    }
+
+    private fun debugPrint(results : List<Detection>) {
+        for ((i, obj) in results.withIndex() ) {
+            val box = obj.boundingBox
+
+            Log.d(TAG, "Detected object: ${i} ")
+            Log.d(TAG, "  boundingBox: (${box.left}, ${box.top}) - (${box.right},${box.bottom})")
+
+            for ((j, category) in obj.categories.withIndex()) {
+                Log.d(TAG, "    Label $j: ${category.label}")
+                val confidence: Int = category.score.times(100).toInt()
+                Log.d(TAG, "    Confidence: ${confidence}%")
+            }
+        }
     }
 
     /**
